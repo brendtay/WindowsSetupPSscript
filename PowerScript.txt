@@ -1,0 +1,12 @@
+# Get the GUID of the currently active plan
+$activePlanGUID = (powercfg -getactivescheme).split()[3]
+
+# Change the settings of the active plan
+# For example, to set the turn-off display time to "Never" for both battery and plugged-in modes:
+powercfg -change -monitor-timeout-dc 0
+powercfg -change -monitor-timeout-ac 0
+powercfg -change -standby-timeout-ac 0
+powercfg -change -standby-timeout-dc 0
+
+# If you want to rename the plan, you can use the following command:
+# powercfg -changename $activePlanGUID "New Plan Name"

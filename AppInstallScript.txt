@@ -1,0 +1,84 @@
+# Define URLs for the installers
+$chromeInstallerUrl = "https://dl.google.com/chrome/install/latest/chrome_installer.exe"
+$adobeReaderInstallerUrl = "https://admdownload.adobe.com/rdcm/installers/live/readerdc64_ha_cra_install.exe"
+
+# Define paths where the installers will be saved
+$chromeInstallerPath = "$env:TEMP\chrome_installer.exe"
+$adobeInstallerPath = "$env:TEMP\adobe_reader_installer.exe"
+
+try {
+    # Download the Chrome installer
+    Invoke-WebRequest -Uri $chromeInstallerUrl -OutFile $chromeInstallerPath -ErrorAction Stop
+    Write-Output "Downloaded Chrome installer successfully."
+} catch {
+    Write-Error "Failed to download Chrome installer: $_"
+    exit 1
+}
+
+try {
+    # Download the Adobe Reader installer
+    Invoke-WebRequest -Uri $adobeReaderInstallerUrl -OutFile $adobeInstallerPath -ErrorAction Stop
+    Write-Output "Downloaded Adobe Reader installer successfully."
+} catch {
+    Write-Error "Failed to download Adobe Reader installer: $_"
+    exit 1
+}
+
+try {
+    # Execute the Chrome installer
+    Start-Process -FilePath $chromeInstallerPath -ArgumentList "/silent /install" -Wait -ErrorAction Stop
+    Write-Output "Installed Chrome successfully."
+} catch {
+    Write-Error "Failed to install Chrome: $_"
+    exit 1
+}
+
+try {
+    # Execute the Adobe Reader installer
+    Start-Process -FilePath $adobeInstallerPath -ArgumentList "/sAll" -Wait -ErrorAction Stop
+    Write-Output "Installed Adobe Reader successfully."
+} catch {
+    Write-Error "Failed to install Adobe Reader: $_"
+    exit 1
+} finally {
+    # Clean up the installer files
+    if (Test-Path $chromeInstallerPath) {
+        Remove-Item -Path $chromeInstallerPath -ErrorAction SilentlyContinue
+        Write-Output "Cleaned up Chrome installer."
+    }
+    if (Test-Path $adobeInstallerPath) {
+        # Remove-Item -Path $adobeInstallerPath -ErrorAction SilentlyContinue
+        Write-Output "Cleaned up Adobe Reader installer."
+    }
+}
+
+# Set Google Chrome as the default browser
+try {
+    # Create XML for DISM
+    $xmlContent = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<DefaultAssociations>
+    <Association Identifier=".htm" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
+    <Association Identifier=".html" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
+    <Association Identifier="http" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
+    <Association Identifier="https" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
+</DefaultAssociations>
+"@
+
+    $xmlPath = "$env:TEMP\defaultassociations.xml"
+    $xmlContent | Out-File -FilePath $xmlPath -Encoding UTF8
+
+    # Apply the default app associations using DISM
+    dism.exe /Online /Import-DefaultAppAssociations:$xmlPath
+
+    Write-Output "Set Chrome as the default browser successfully."
+
+    # Clean up the XML file
+    if (Test-Path $xmlPath) {
+        Remove-Item -Path $xmlPath -ErrorAction SilentlyContinue
+        Write-Output "Cleaned up association XML file."
+    }
+} catch {
+    Write-Error "Failed to set Chrome as the default browser: $_"
+    exit 1
+}
